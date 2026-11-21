@@ -207,15 +207,14 @@ class FreeBotApp:
         if not key:
             return
 
-        # Build messages with system prompt + history + current user message
+        # Build messages with system prompt + history (user message already added to history by _on_send)
         messages = []
         if bot.system_prompt:
             messages.append({"role": "system", "content": bot.system_prompt})
-        # Add recent history
+        # Add recent history (includes the user message just added)
         bot_history = self.history.get(bot.name, [])
-        messages.extend(bot_history[-(MAX_MESSAGES_PER_BOT - 1):])  # Leave room for current message
-        # Add current user message
-        messages.append({"role": "user", "content": user_text})
+        # Limit to max messages for context window
+        messages.extend(bot_history[-MAX_MESSAGES_PER_BOT:])
 
         # Create streaming bubble
         bubble = ft.Container(
