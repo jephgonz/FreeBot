@@ -153,7 +153,13 @@ class FreeBotApp:
             opts = [ft.dropdown.Option(m["id"], m["id"]) for m in models]
             self.model_dd.options = opts
             if opts:
-                self.model_dd.value = bot.model if bot.model in [o.key for o in opts] else opts[0].key
+                # Set model after options are loaded to avoid race condition
+                available = {o.key for o in opts}
+                self.model_dd.value = bot.model if bot.model in available else opts[0].key
+                # Ensure bot.model is updated if it was invalid
+                if bot.model not in available:
+                    bot.model = self.model_dd.value
+                    store.save_settings(self.settings)
             self.model_dd.hint_text = "Select model"
             self.model_dd.update()
         except Exception:
@@ -280,8 +286,9 @@ class FreeBotApp:
 
     def _on_model_change(self, e) -> None:
         bot = self._find_bot(self.current_bot)
-        if bot: bot.model = self.model_dd.value
-        store.save_settings(self.settings)
+        if bot:
+            bot.model = self.model_dd.value
+            store.save_settings(self.settings)
 
     def _on_new_bot_click(self, e) -> None: self.bot_dlg.open = True; self.bot_dlg.update()
     def _on_save_bot(self, e) -> None:
@@ -298,10 +305,17 @@ class FreeBotApp:
         self.settings.bots.append(bot)
         store.save_settings(self.settings)
         self._refresh_bot_list()
-        self._select_bot(bot.name)
+        # Reload models for the new bot's key before selecting
+        self.page.run_task(self._load_models_for_bot, bot).add_done_callback(
+            lambda _: self.page.run_task(self._select_bot_after_models, bot.name)
+        )
         self.bot_name_field.value = ""
         self.bot_dlg.open = False
         self.bot_dlg.update()
+
+    async def _select_bot_after_models(self, name: str) -> None:
+        """Select bot after models are loaded to ensure dropdown is populated."""
+        self._select_bot(name)
 
     async def _load_models_for_bot_dialog(self) -> None:
         if not self.settings.api_keys:
@@ -321,8 +335,23 @@ class FreeBotApp:
     def _on_settings_click(self, e) -> None: self.settings_dlg.open = True; self.settings_dlg.update()
     def _on_save_settings(self, e) -> None:
         self.settings.base_url = self.base_url_field.value
-        if self.settings.api_keys: self.settings.api_keys[0].key = self.api_key_field.value
+        if self.settings.api_keys:
+            self.settings.api_keys[0].key = self.api_key_field.value
+        elif self.api_key_field.value:
+            # Create first API key if none exists
+            self.settings.api_keys.append(store.ApiKey(
+                label="local-gateway",
+                key=self.api_key_field.value,
+                base_url=self.settings.base_url,
+                provider="freellmapi",
+                note="Default local gateway",
+                enabled=True,
+            ))
         store.save_settings(self.settings)
+        # Refresh bot dialog's key dropdown
+        if self.bot_key_dd:
+            self.bot_key_dd.options = [ft.dropdown.Option(k.label, k.label) for k in self.settings.api_keys]
+            self.bot_key_dd.update()
         self.settings_dlg.open = False
         self.settings_dlg.update()
 

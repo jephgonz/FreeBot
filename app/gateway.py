@@ -39,8 +39,11 @@ def normalize_base_url(base_url: str) -> str:
     if not url:
         url = "http://127.0.0.1:8000/v1"
     # If the user typed a bare host with no version segment, append /v1 for them.
-    if not url.endswith("/v1") and "/v1" not in url:
+    # Check for /v1 at end OR /v1/ in middle (but not if it's already at end)
+    if not url.endswith("/v1") and "/v1/" not in url:
         url = f"{url}/v1"
+    # If URL ends with /v1/ (trailing slash after v1), strip the trailing slash
+    url = url.rstrip("/")
     return url
 
 
