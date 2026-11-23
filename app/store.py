@@ -52,6 +52,8 @@ class Settings:
     api_keys: list[ApiKey] = field(default_factory=list)
     bots: list[Bot] = field(default_factory=list)
     last_bot: str = ""
+    notifications_enabled: bool = True
+    launch_at_startup: bool = False
 
 
 def _load() -> dict[str, Any]:
@@ -75,6 +77,8 @@ def load_settings() -> Settings:
     s = Settings(
         base_url=data.get("base_url", "http://127.0.0.1:8000/v1"),
         last_bot=data.get("last_bot", ""),
+        notifications_enabled=data.get("notifications_enabled", True),
+        launch_at_startup=data.get("launch_at_startup", False),
     )
     for k in data.get("api_keys", []):
         s.api_keys.append(
@@ -105,6 +109,8 @@ def save_settings(s: Settings) -> None:
     data = {
         "base_url": s.base_url,
         "last_bot": s.last_bot,
+        "notifications_enabled": s.notifications_enabled,
+        "launch_at_startup": s.launch_at_startup,
         "api_keys": [
             {
                 "label": k.label,
