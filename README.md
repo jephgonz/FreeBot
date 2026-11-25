@@ -1,6 +1,6 @@
 # FreeBot — Advanced AI Desktop Assistant
 
-A macOS-styled desktop AI assistant (Flet / Python) with powerful features built on a free LLM gateway. Supports dark/light mode, personality modes, web search, code execution, file operations, deep research, and more.
+A macOS-styled desktop AI assistant (**Electron + React + Vite + TypeScript**) with powerful features built on a free LLM gateway. Supports dark/light mode, personality modes, web search, code execution, file operations, deep research, and more.
 
 ## ✨ Features
 
@@ -57,9 +57,33 @@ A macOS-styled desktop AI assistant (Flet / Python) with powerful features built
 
 ## Quick Start
 
+### Development
 ```bash
-pip install flet httpx beautifulsoup4
-python run.py
+npm install
+npm run dev
+```
+
+### Build for Production
+```bash
+npm run build
+npm run dist
+```
+
+### Project Structure
+```
+src/
+  main/                 # Electron main process
+    index.ts           # Entry point, window management, IPC
+    preload.ts         # Secure IPC bridge (contextBridge)
+    ipc/               # IPC handlers
+  renderer/            # React app (Vite)
+    components/        # React components
+    hooks/             # Custom hooks
+    stores/            # Zustand stores
+    services/          # API clients, utilities
+    types/             # TypeScript types
+    App.tsx            # Root component
+    main.tsx           # React entry
 ```
 
 Then in the app:
@@ -75,7 +99,7 @@ Then in the app:
 | `/search <query>` | Web search | `/search Python async patterns` |
 | `/research <topic>` | Deep multi-step research | `/research quantum computing basics` |
 | `/code <code>` | Execute Python/JS | `/code print(2+2)` |
-| `/translate <lang> | <text>` | Translate text | `/translate spanish | Hello world` |
+| `/translate <lang> \| <text>` | Translate text | `/translate spanish \| Hello world` |
 | `/math <expr>` | Evaluate math | `/math 2 + 3 * 4` |
 | `/summarize <text>` | Summarize text | `/summarize Long article...` |
 | `/write <prompt>` | Draft content | `/write email to boss about raise` |
@@ -93,19 +117,6 @@ Just type naturally:
 
 On Windows, use absolute paths: `C:\Users\Name\Desktop\file.txt`
 
-## Project Layout
-
-```
-run.py              # Entry point (flet run)
-app/
-  main.py           # Flet UI — sidebar, chat, dialogs, theme
-  gateway.py        # Gateway client (models + streamed chat)
-  store.py          # Settings + API keys + bots (config.json)
-  history.py        # Per-bot chat history (history.json)
-  local_fs.py       # Local filesystem wrapper (safe operations)
-  features.py       # Advanced features: search, code, research, etc.
-```
-
 ## How It Connects
 
 The app speaks the **OpenAI-compatible** protocol that freeLLMapi exposes:
@@ -114,16 +125,26 @@ The app speaks the **OpenAI-compatible** protocol that freeLLMapi exposes:
 
 So `base = http://127.0.0.1:8000/v1` with `Bearer <token>` header. Any OpenAI-compatible gateway works.
 
+## Tech Stack
+
+- **Framework**: Electron 30+ (main) + React 19 (renderer)
+- **Build**: Vite 6 (renderer) + esbuild (main)
+- **Language**: TypeScript 5 (strict mode)
+- **Styling**: Tailwind CSS 4 (macOS-inspired design system)
+- **State**: Zustand (global) + React Query (server state)
+- **IPC**: contextBridge + type-safe channels
+- **Packaging**: electron-builder (NSIS/dmg/AppImage)
+
 ## Extending
 
 ### Add New Personalities
-Edit `features.py` → `PERSONALITIES` dict.
+Edit `src/renderer/stores/personalities.ts` → `PERSONALITIES` array.
 
 ### Add New Commands
-Extend `FeatureManager.handle_command()` in `features.py`.
+Extend `CommandRegistry` in `src/renderer/services/commands.ts`.
 
 ### Add Connectors
-Create new classes in `features.py` and wire into `FeatureManager`.
+Create new classes in `src/renderer/services/connectors/` and register in `FeatureManager`.
 
 ## Notes
 
